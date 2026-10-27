@@ -10,8 +10,19 @@
         "w_3_grease",
         "w_3_fuel_lines"
       ]
+    },
+    "1": {
+      "date": "",
+      "fact_km": 0,
+      "done_works": [
+        "w_1_wipers"
+      ]
     }
   },
-  "manual": {},
-  "current_km": 2000
+  "manual": {
+    "1": []
+  },
+  "current_km": 2000,
+  "custom_ops": {},
+  "overrides": {}
 }
