@@ -437,42 +437,88 @@ with tab3:
 
 
 # ================== ВКЛАДКА 4: ЭКСПОРТ ==================
+# ================== ВКЛАДКА 4: ЭКСПОРТ ==================
 with tab4:
-    st.subheader("Краткий экспорт (только отметки)")
+    st.subheader("Подробный экспорт всех работ")
+    st.write("Здесь выгружается каждый шаг (ТО, работа, дата) в отдельной строке. Такую таблицу удобно читать и фильтровать в Excel.")
     
-    def build_export_df():
+    def build_detailed_export_df():
         rows = []
-        # Цикл от 0 до N-1
+        # Цикл по всем ТО (от 0 до 55)
         for to_num in range(0, N):
             info = data["to"].get(str(to_num), {})
+            done_set = set(info.get("done_works", []))
+            
+            # Собираем работы (базовые + кастомные)
             works = list(base_matrix.get(to_num, []))
             for op_id, op in data["custom_ops"].items():
                 apply = False
                 if op["type"] == "all": apply = True
                 elif op["type"] == "positions" and to_num in op["positions"]: apply = True
                 if apply:
-                    works.append({"name": op["name"], "schedule_code": op["code"]})
+                    works.append({
+                        "id": op_id, "group": op["group"], "name": op["name"],
+                        "part": data["overrides"].get(op_id, {}).get("part", ""),
+                        "analog": data["overrides"].get(op_id, {}).get("analog", ""),
+                        "schedule_code": op.get("code", "I")
+                    })
             
-            works_txt = "; ".join(f"[{w['schedule_code']}] {w['name']}" for w in works) or "—"
-            
-            rows.append({
-                "ТО": f"ТО-{to_num}",
-                "Дата": info.get("date", ""),
-                "План, км": mileage_for(to_num, interval),
-                "Факт, км": info.get("fact_km", ""),
-                "Работы": works_txt,
-                "Отмечено работ": len(info.get("done_works", [])),
-            })
+            # Если на это ТО нет работ, пропускаем
+            if not works:
+                continue
+                
+            for w in works:
+                key = f"w_{to_num}_{w['id']}"
+                is_done = key in done_set
+                
+                rows.append({
+                    "ТО": f"ТО-{to_num}",
+                    "План, км": mileage_for(to_num, interval),
+                    "Дата": info.get("date", ""),
+                    "Факт, км": info.get("fact_km", ""),
+                    "Группа": w.get("group", ""),
+                    "Код": w["schedule_code"],
+                    "Работа": w["name"],
+                    "Каталожный номер": w.get("part", ""),
+                    "Аналог": w.get("analog", ""),
+                    "Статус": "✅ Выполнено" if is_done else "❌ Не выполнено"
+                })
         return pd.DataFrame(rows)
 
-    df_export = build_export_df()
-    st.download_button(
-        "⬇ Скачать CSV (Excel-совместимый)",
-        data=df_export.to_csv(index=False).encode("utf-8-sig"),
-        file_name="Pajero_TO.csv",
-        mime="text/csv",
-    )
+    df_detailed = build_detailed_export_df()
+    
+    if df_detailed.empty:
+        st.warning("Нет данных для экспорта.")
+    else:
+        st.info(f"Всего строк для экспорта: {len(df_detailed)}")
+        
+        # Красивый предпросмотр (первые 100 строк, чтобы не вешать браузер)
+        st.dataframe(df_detailed.head(100), use_container_width=True)
+        if len(df_detailed) > 100:
+            st.caption("*(Показаны первые 100 строк из всех. В Excel выгрузится полностью)*")
 
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.download_button(
+                "⬇ Скачать CSV (подробный)",
+                data=df_detailed.to_csv(index=False).encode("utf-8-sig"),
+                file_name="Pajero_TO_Detailed.csv",
+                mime="text/csv",
+            )
+            
+        with col2:
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                df_detailed.to_excel(writer, index=False, sheet_name='Все работы')
+            st.download_button(
+                "⬇ Скачать Excel (.xlsx)",
+                data=buffer.getvalue(),
+                file_name="Pajero_TO_Detailed.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    st.divider()
     with st.expander("⚠️ Служебное"):
         if st.button("Сбросить абсолютно все данные (включая свои операции)"):
             st.session_state.data = {}
