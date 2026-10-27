@@ -112,9 +112,25 @@ with tab1:
     if int(new_km) != int(entry.get("fact_km", 0)):
         entry["fact_km"] = int(new_km)
 
-    if st.button("💾 Сохранить дату и пробег"):
-        ok, msg = save_data(data)
-        st.success(msg) if ok else st.error(msg)
+    # Кнопки сохранения и удаления данных ТО
+    col_save, col_del = st.columns([2, 2])
+    with col_save:
+        if st.button("💾 Сохранить дату и пробег"):
+            ok, msg = save_data(data)
+            st.success(msg) if ok else st.error(msg)
+    
+    with col_del:
+        if st.button("🗑 Очистить данные этого ТО"):
+            # Полностью удаляем запись об этом ТО (дата, пробег, выполненные работы)
+            if str(selected_to) in data["to"]:
+                del data["to"][str(selected_to)]
+            # Также удаляем ручные материалы, привязанные к этому ТО
+            if str(selected_to) in data["manual"]:
+                del data["manual"][str(selected_to)]
+            
+            save_data(data)
+            st.success(f"Данные для ТО-{selected_to} полностью удалены!")
+            st.rerun()
 
     st.markdown(f"**Плановый пробег ТО-{selected_to}:** {mileage_for(selected_to, interval):,} км".replace(",", " "))
 
