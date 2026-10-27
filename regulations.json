@@ -1,0 +1,66 @@
+{
+  "vehicle": {
+    "brand": "Mitsubishi",
+    "model": "Pajero IV 3.0 Бензин",
+    "year": 2013,
+    "vin": "JMBLYV93WDJ003403"
+  },
+  "interval": {
+    "first_to_km": 1000,
+    "step_km": 10000,
+    "max_to": 56
+  },
+  "operations": [
+    { "id": "belt_gen", "group": "Операции под капотом", "name": "Ремень генератора", "part": "MD 199223", "analog": "Dayko 5PK1125; Gates 48363", "type": "every8_from9", "code": "I" },
+    { "id": "belt_ps", "group": "Операции под капотом", "name": "Ремень гидроусилителя руля", "part": "MD 363022", "analog": "Gates 48363", "type": "every8_from9", "code": "I" },
+    { "id": "belt_ac", "group": "Операции под капотом", "name": "Ремень кондиционера", "part": "MB 272651", "analog": "Gates 6465 MC", "type": "every8_from9", "code": "I" },
+    { "id": "hv_wires", "group": "Операции под капотом", "name": "Высоковольтные провода", "part": "MD 371794", "analog": "", "type": "every8_from9", "code": "I" },
+    { "id": "hoses", "group": "Операции под капотом", "name": "Шланги и патрубки двигателя, уровень жидкости гидроусилителя", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "timing_belt", "group": "Операции под капотом", "name": "Ремень привода ГРМ", "part": "MD 307487", "analog": "Japan Cars E35053JC; Dayco 94495", "type": "positions", "positions": [9,17,25,33,41,49], "code": "R" },
+    { "id": "tensioner", "group": "Операции под капотом", "name": "Ролик натяжителя", "part": "MD 140071", "analog": "Japan Cars E55041; Koyo PU106018FRR1D", "type": "positions", "positions": [9,17,25,33,41,49], "code": "R" },
+    { "id": "idler", "group": "Операции под капотом", "name": "Ролик натяжителя (паразитный)", "part": "MD 319022", "analog": "Koyo PU305729ARR1DW1", "type": "positions", "positions": [9,17,25,33,41,49], "code": "R" },
+    { "id": "pump", "group": "Операции под капотом", "name": "Помпа", "part": "1300A012", "analog": "Japan Cars D15017", "type": "positions", "positions": [9,17,25,33,41,49], "code": "R" },
+    { "id": "pump_gasket", "group": "Операции под капотом", "name": "Прокладка помпы", "part": "MD 188352", "analog": "", "type": "positions", "positions": [9,17,25,33,41,49], "code": "R" },
+    { "id": "cam_seal", "group": "Операции под капотом", "name": "Сальник распредвала двигателя, 2 шт.", "part": "MD 372536", "analog": "", "type": "positions", "positions": [9,17,25,33,41,49], "code": "R" },
+    { "id": "crank_seal", "group": "Операции под капотом", "name": "Сальник коленвала передний", "part": "MD 372249", "analog": "", "type": "positions", "positions": [9,17,25,33,41,49], "code": "R" },
+    { "id": "plugs_std", "group": "Операции под капотом", "name": "Свечи обычные", "part": "", "analog": "", "type": "odd_from3", "code": "R" },
+    { "id": "plugs_pt", "group": "Операции под капотом", "name": "Свечи платиновые", "part": "MS 851335", "analog": "NGK 7994", "type": "coolant_like", "code": "R" },
+    { "id": "coolant", "group": "Операции под капотом", "name": "Охлаждающая жидкость", "part": "", "analog": "", "type": "coolant_like", "code": "R" },
+    { "id": "brake_fluid", "group": "Операции под капотом", "name": "Жидкость привода тормозов", "part": "DOT 4", "analog": "", "type": "brake_air", "code": "R" },
+    { "id": "air_filter", "group": "Операции под капотом", "name": "Воздушный фильтр", "part": "MZ 311783", "analog": "Japan Cars B25020JC; Nipparts J1 325 020", "type": "brake_air", "code": "R" },
+    { "id": "battery", "group": "Операции под капотом", "name": "Электролит АКБ", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "fuel_filter", "group": "Операции под капотом", "name": "Топливный фильтр", "part": "MR 239580", "analog": "Japan Cars B35046JC; Nipparts J1 335 048; Direct Parts 42176С", "type": "fuel_filter", "code": "R" },
+    { "id": "fuel_tank_filter", "group": "Операции под капотом", "name": "Топливный фильтр (в баке)", "part": "MR 204495", "analog": "", "type": "fuel_tank", "code": "R" },
+    { "id": "brake_nipple", "group": "Операции под капотом", "name": "Ниппель вакуумного усилителя тормозов", "part": "", "analog": "", "type": "odd_from3", "code": "C" },
+
+    { "id": "suspension", "group": "Операции под автомобилем", "name": "Детали подвески (включая пыльники), шаровые опоры, крепежные болты", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "grease", "group": "Операции под автомобилем", "name": "Смазка шарниров, в т.ч. карданных", "part": "Смазка густая VU 1206", "analog": "", "type": "all", "code": "L" },
+    { "id": "cv_boots", "group": "Операции под автомобилем", "name": "Пыльники ШРУСов", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "steering", "group": "Операции под автомобилем", "name": "Шарниры и пыльники рулевого управления", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "transfer_oil", "group": "Операции под автомобилем", "name": "Масло в раздаточной коробке, 2,3 л", "part": "", "analog": "", "type": "coolant_like", "code": "R" },
+    { "id": "axle_oil", "group": "Операции под автомобилем", "name": "Масло в переднем и заднем мостах, 3,5 л", "part": "", "analog": "", "type": "coolant_like", "code": "R" },
+    { "id": "exhaust", "group": "Операции под автомобилем", "name": "Герметичность системы выпуска", "part": "", "analog": "", "type": "all", "code": "I" },
+
+    { "id": "handbrake", "group": "Операции внутри автомобиля", "name": "Рычаг стояночного тормоза", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "cabin_filter", "group": "Операции внутри автомобиля", "name": "Воздушный фильтр системы вентиляции", "part": "XZ311917D", "analog": "Nipparts J1 345 001", "type": "odd_from3", "code": "R" },
+
+    { "id": "hub_bearings", "group": "Операции снаружи автомобиля", "name": "Подшипники передних ступиц", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "brake_hoses", "group": "Операции снаружи автомобиля", "name": "Герметичность шлангов тормозной системы", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "brake_discs", "group": "Операции снаружи автомобиля", "name": "Тормозные диски", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "pads_front", "group": "Операции снаружи автомобиля", "name": "Тормозные колодки передние", "part": "MR 389549", "analog": "", "type": "odd_from3", "code": "R" },
+    { "id": "pads_rear", "group": "Операции снаружи автомобиля", "name": "Тормозные колодки задние", "part": "MR 389575", "analog": "Kashiam D6086M", "type": "odd_from3", "code": "R" },
+    { "id": "fuel_lines", "group": "Операции снаружи автомобиля", "name": "Герметичность трубопроводов топливной системы", "part": "", "analog": "", "type": "all", "code": "I" },
+
+    { "id": "atf", "group": "Операции на подогретом автомобиле", "name": "Масло АКПП, 9,3 л", "part": "", "analog": "", "type": "coolant_like", "code": "R" },
+    { "id": "atf_filter", "group": "Операции на подогретом автомобиле", "name": "Фильтр АКПП", "part": "MR 528836", "analog": "", "type": "coolant_like", "code": "R" },
+    { "id": "engine_oil", "group": "Операции на подогретом автомобиле", "name": "Масло в двигателе, 4,5 л", "part": "", "analog": "", "type": "all", "code": "R" },
+    { "id": "oil_filter", "group": "Операции на подогретом автомобиле", "name": "Масляный фильтр", "part": "MD 352626", "analog": "Japan Cars B17003JC", "type": "all", "code": "R" },
+    { "id": "co", "group": "Операции на подогретом автомобиле", "name": "Проверка СО и НС в отработавших газах", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "smoke", "group": "Операции на подогретом автомобиле", "name": "Проверка дымности отработавших газов", "part": "", "analog": "", "type": "all", "code": "I" },
+
+    { "id": "locks", "group": "Дополнительные операции", "name": "Дверные замки, петли, фиксаторы", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "wipers", "group": "Дополнительные операции", "name": "Стеклоочистители, омыватели фар, стекол", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "lights", "group": "Дополнительные операции", "name": "Осветительные приборы", "part": "", "analog": "", "type": "all", "code": "I" },
+    { "id": "alignment", "group": "Дополнительные операции", "name": "Сход-развал", "part": "", "analog": "", "type": "odd_from3", "code": "I" }
+  ]
+}
