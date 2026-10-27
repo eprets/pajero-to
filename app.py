@@ -292,16 +292,24 @@ with tab2:
 # ================== ВКЛАДКА 3: ПОЛНАЯ СВОДКА ==================
 with tab3:
     st.subheader("Сводная таблица по всем ТО")
-    st.write("Здесь отображаются все работы по всем 56 ТО. Вы можете использовать поиск для фильтрации.")
+    
+    # Переключатель режимов отображения
+    view_mode = st.radio(
+        "Что показывать?",
+        ["Весь регламент", "Только заполненные ТО (где есть дата)", "Только выполненные работы"],
+        horizontal=True
+    )
     
     search_query = st.text_input("🔍 Поиск по работам, материалам или номерам ТО", placeholder="Например: Ремень, Масло, ТО-9...")
 
-    # Строим данные для поиска и экспорта (чистый текст)
     export_rows = []
+    found_any = False
+
     for to_num in range(1, N + 1):
         info = data["to"].get(str(to_num), {})
-        works = list(base_matrix.get(to_num, []))
+        done_set = set(info.get("done_works", []))
         
+        works = list(base_matrix.get(to_num, []))
         for op_id, op in data["custom_ops"].items():
             apply = False
             if op["type"] == "all": apply = True
@@ -313,34 +321,44 @@ with tab3:
                     "analog": data["overrides"].get(op_id, {}).get("analog", ""),
                     "schedule_code": op.get("code", "I")
                 })
-        
-        if not works:
-            continue
 
+        # Фильтрация по режиму отображения
+        if view_mode == "Только заполненные ТО (где есть дата)" and not info.get("date"):
+            continue
+            
+        # Если выбран режим "Только выполненные", оставляем только отмеченные работы
+        works_to_show = works
+        if view_mode == "Только выполненные работы":
+            works_to_show = [w for w in works if f"w_{to_num}_{w['id']}" in done_set]
+            if not works_to_show:
+                continue
+
+        # Собираем текстовую версию для поиска и экспорта
         grouped = {}
-        for w in works:
+        for w in works_to_show:
             grouped.setdefault(w["group"], []).append(w)
 
-        # Собираем текстовую версию для экспорта в Excel
         text_works = ""
         for group, items in grouped.items():
             text_works += f"== {group} ==\n"
             for w in items:
-                text_works += f"[{w['schedule_code']}] {w['name']}\n"
+                mark = "X" if f"w_{to_num}_{w['id']}" in done_set else " "
+                text_works += f"[{mark}] [{w['schedule_code']}] {w['name']}\n"
             text_works += "\n"
 
+        # Фильтрация по поиску
+        search_text = f"ТО-{to_num} {text_works}".lower()
+        if search_query and search_query.lower() not in search_text:
+            continue
+
+        found_any = True
         export_rows.append({
             "ТО": f"ТО-{to_num}",
             "План, км": mileage_for(to_num, interval),
             "Дата": info.get("date", ""),
             "Факт, км": info.get("fact_km", ""),
-            "Работы (текст)": text_works.strip()
+            "Работы (выполнено [X] / не выполнено [ ])": text_works.strip()
         })
-
-        # Логика поиска
-        search_text = f"ТО-{to_num} {text_works}".lower()
-        if search_query and search_query.lower() not in search_text:
-            continue
 
         # --- Отрисовка карточки ---
         with st.container(border=True):
@@ -352,26 +370,43 @@ with tab3:
             
             col_w, col_m = st.columns([3, 2])
             
-            # Колонка с работами
+            # Колонка с работами и чекбоксами
             with col_w:
                 st.markdown("**Регламентные работы:**")
+                changed = False
                 for group, items in grouped.items():
                     st.markdown(f"<span style='color: #2f75b5; font-weight: bold; font-size: 14px;'>{group}</span>", unsafe_allow_html=True)
                     for w in items:
-                        st.markdown(f"<div style='margin-left: 15px;'>[{w['schedule_code']}] {w['name']}</div>", unsafe_allow_html=True)
+                        key = f"w_{to_num}_{w['id']}"
+                        checked = key in done_set
+                        # Чекбокс прямо в сводке!
+                        new_checked = st.checkbox(
+                            f"[{w['schedule_code']}] {w['name']}", 
+                            value=checked, 
+                            key=f"sum_cb_{to_num}_{w['id']}"
+                        )
+                        if new_checked != checked:
+                            changed = True
+                            if new_checked: done_set.add(key)
+                            else: done_set.discard(key)
+
+                if changed:
+                    entry = data["to"].setdefault(str(to_num), {"date": "", "fact_km": 0, "done_works": []})
+                    entry["done_works"] = list(done_set)
+                    save_data(data)
+                    st.rerun()
             
             # Колонка с материалами
             with col_m:
                 st.markdown("**Замены / материалы:**")
                 has_materials = False
-                for group, items in grouped.items():
-                    for w in items:
-                        if w["schedule_code"] == "R" and (w.get("part") or w.get("analog")):
-                            has_materials = True
-                            ov = data["overrides"].get(w["id"], {})
-                            part = ov.get("part", w["part"])
-                            analog = ov.get("analog", w["analog"])
-                            st.markdown(f"<div style='margin-bottom: 5px;'><b>{w['name']}</b><br><span style='color: gray; font-size: 12px;'>{part or '—'} {(' / ' + analog) if analog else ''}</span></div>", unsafe_allow_html=True)
+                for w in works_to_show:
+                    if w["schedule_code"] == "R" and (w.get("part") or w.get("analog")):
+                        has_materials = True
+                        ov = data["overrides"].get(w["id"], {})
+                        part = ov.get("part", w["part"])
+                        analog = ov.get("analog", w["analog"])
+                        st.markdown(f"<div style='margin-bottom: 5px;'><b>{w['name']}</b><br><span style='color: gray; font-size: 12px;'>{part or '—'} {(' / ' + analog) if analog else ''}</span></div>", unsafe_allow_html=True)
                 if not has_materials:
                     st.markdown("<span style='color: gray;'>—</span>", unsafe_allow_html=True)
 
@@ -379,7 +414,9 @@ with tab3:
     st.divider()
     df_export = pd.DataFrame(export_rows)
     
-    if not df_export.empty:
+    if not found_any:
+        st.warning("По вашему запросу ничего не найдено.")
+    else:
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df_export.to_excel(writer, index=False, sheet_name='ТО Сводка')
@@ -390,8 +427,6 @@ with tab3:
             file_name="Pajero_TO_Summary.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-    else:
-        st.warning("По вашему запросу ничего не найдено.")
 
 
 # ================== ВКЛАДКА 4: ЭКСПОРТ ==================
