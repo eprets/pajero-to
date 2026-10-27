@@ -1,6 +1,16 @@
 {
-  "to": {},
-  "manual": {},
+  "to": {
+    "4": {
+      "date": "",
+      "fact_km": 0,
+      "done_works": [
+        "w_4_cv_boots"
+      ]
+    }
+  },
+  "manual": {
+    "4": []
+  },
   "custom_ops": {},
   "overrides": {},
   "current_km": 10000
