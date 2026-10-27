@@ -14,9 +14,7 @@
     "1": {
       "date": "",
       "fact_km": 0,
-      "done_works": [
-        "w_1_wipers"
-      ]
+      "done_works": []
     }
   },
   "manual": {
