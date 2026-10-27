@@ -224,13 +224,23 @@ with tab1:
 
 
 # ================== ВКЛАДКА 2: МОИ ОПЕРАЦИИ ==================
+# ================== ВКЛАДКА 2: МОИ ОПЕРАЦИИ ==================
 with tab2:
     st.subheader("Добавить свою операцию в регламент")
     st.info("Здесь вы можете добавить операцию, которой нет в заводском регламенте.")
 
     c3, c4 = st.columns(2)
     op_type = c3.radio("Когда выполнять?", ["Каждое ТО", "Только на выбранных ТО"], key="op_type_radio")
-    op_code = c4.selectbox("Тип отметки", ["I (Проверка)", "R (Замена)", "L (Смазка)", "C (Очистка)"], key="op_code_radio")
+    
+    # Полные расшифровки для выпадающего списка
+    code_options = {
+        "I — Проверка, затем при необходимости очистка, регулировка или замена": "I",
+        "R — Замена": "R",
+        "L — Смазка": "L",
+        "C — Очистка": "C"
+    }
+    selected_code_label = c4.selectbox("Тип отметки", list(code_options.keys()), key="op_code_radio")
+    op_code = code_options[selected_code_label]
     
     to_selection = []
     if op_type == "Только на выбранных ТО":
@@ -251,7 +261,7 @@ with tab2:
                 "group": op_group,
                 "type": "all" if op_type == "Каждое ТО" else "positions",
                 "positions": to_selection if op_type != "Каждое ТО" else [],
-                "code": op_code[0]
+                "code": op_code  # Здесь теперь сохранится чистая буква 'I', 'R', 'L' или 'C'
             }
             if part or analog:
                 data["overrides"][op_id] = {"part": part, "analog": analog}
