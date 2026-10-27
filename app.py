@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime
+import io
 
 import pandas as pd
 import streamlit as st
@@ -23,14 +24,26 @@ if "data" not in st.session_state:
     st.session_state.data = load_data()
 
 data = st.session_state.data
-data.setdefault("to", {})          # Дата, пробег и выполненные работы
-data.setdefault("manual", {})      # Ручные материалы
-data.setdefault("custom_ops", {})  # Пользовательские операции
-data.setdefault("overrides", {})   # Переопределенные каталожные номера
+data.setdefault("to", {})
+data.setdefault("manual", {})
+data.setdefault("custom_ops", {})
+data.setdefault("overrides", {})
 
 v = regulations["vehicle"]
 st.title(f"🚙 Лист ТО — {v['brand']} {v['model']}, {v['year']}")
 st.caption(f"VIN: {v['vin']}")
+
+# ---------- Легенда (как в HTML) ----------
+with st.expander("ℹ️ Расшифровка обозначений (I, R, L, C)", expanded=False):
+    legend = regulations.get("legend", {})
+    st.markdown(f"""
+    * **I** — {legend.get('I', 'Проверка, затем при необходимости очистка, регулировка или замена')};
+    * **R** — {legend.get('R', 'Замена')};
+    * **L** — {legend.get('L', 'Смазка')};
+    * **C** — {legend.get('C', 'Очистка')}.
+    
+    *Таблица сформирована по листу «Регламент»: ТО-1 = 1 000 км, далее шаг 10 000 км; ТО-56 = 550 000 км.*
+    """)
 
 # ---------- Уведомления ----------
 current_km = st.number_input(
@@ -70,7 +83,7 @@ else:
 st.divider()
 
 # ---------- Вкладки ----------
-tab1, tab2, tab3 = st.tabs(["📋 Выполнение ТО", "⚙️ Мои операции", "📥 Экспорт"])
+tab1, tab2, tab3, tab4 = st.tabs(["📋 Выполнение ТО", "⚙️ Мои операции", "📊 Полная сводка", "📥 Экспорт"])
 
 # ================== ВКЛАДКА 1: ВЫПОЛНЕНИЕ ТО ==================
 with tab1:
@@ -102,10 +115,8 @@ with tab1:
 
     st.markdown(f"**Плановый пробег ТО-{selected_to}:** {mileage_for(selected_to, interval):,} км".replace(",", " "))
 
-    # Собираем работы: базовые + кастомные
     works = list(base_matrix.get(selected_to, []))
     
-    # Добавляем кастомные операции, если они выпадают на это ТО
     for op_id, op in data["custom_ops"].items():
         apply = False
         if op["type"] == "all": apply = True
@@ -147,13 +158,11 @@ with tab1:
             save_data(data)
             st.rerun()
 
-    # Блок замены (только для этого ТО) с возможностью редактирования
     replacements = [w for w in works if w["schedule_code"] == "R" and (w["part"] or w["analog"] or w["id"] in data["overrides"])]
     if replacements:
         st.markdown("**📦 Материалы для замены (можно редактировать)**")
         st.caption("Впишите свои номера или аналоги в таблицу и нажмите «Сохранить изменения материалов».")
         
-        # Подготавливаем данные для st.data_editor
         rep_data = []
         for w in replacements:
             ov = data["overrides"].get(w["id"], {})
@@ -168,7 +177,7 @@ with tab1:
         edited_df = st.data_editor(
             df_rep,
             column_config={
-                "id": None, # Скрываем колонку id
+                "id": None,
                 "Работа": st.column_config.TextColumn(disabled=True),
                 "Каталожный номер": st.column_config.TextColumn("Каталожный номер"),
                 "Аналог": st.column_config.TextColumn("Аналог"),
@@ -188,7 +197,6 @@ with tab1:
             st.success("Материалы обновлены!")
             st.rerun()
 
-    # Ручные материалы для этого ТО
     st.markdown("**➕ Ручные материалы (только для этого ТО)**")
     manual_rows = data["manual"].setdefault(str(selected_to), [])
     if manual_rows:
@@ -220,17 +228,14 @@ with tab2:
     st.subheader("Добавить свою операцию в регламент")
     st.info("Здесь вы можете добавить операцию, которой нет в заводском регламенте.")
 
-    # Выносим выбор периодичности ИЗ формы, чтобы срабатывала логика появления списка
     c3, c4 = st.columns(2)
     op_type = c3.radio("Когда выполнять?", ["Каждое ТО", "Только на выбранных ТО"], key="op_type_radio")
     op_code = c4.selectbox("Тип отметки", ["I (Проверка)", "R (Замена)", "L (Смазка)", "C (Очистка)"], key="op_code_radio")
     
-    # Если выбрано "Только на выбранных", сразу показываем мультиселект
     to_selection = []
     if op_type == "Только на выбранных ТО":
         to_selection = st.multiselect("Выберите номера ТО (можно несколько)", list(range(1, N + 1)), default=[1])
 
-    # А остальные поля — в форме
     with st.form("add_custom_op"):
         c1, c2 = st.columns(2)
         op_name = c1.text_input("Название операции")
@@ -273,18 +278,114 @@ with tab2:
                 st.rerun()
 
 
-# ================== ВКЛАДКА 3: ЭКСПОРТ ==================
+# ================== ВКЛАДКА 3: ПОЛНАЯ СВОДКА ==================
 with tab3:
-    st.subheader("Экспорт данных")
+    st.subheader("Сводная таблица по всем ТО")
+    st.write("Здесь отображаются все работы по всем 56 ТО. Вы можете использовать поиск для фильтрации.")
+    
+    search_query = st.text_input("🔍 Поиск по работам, материалам или номерам ТО", placeholder="Например: Ремень, Масло, ТО-9...")
+
+    def build_full_summary():
+        rows = []
+        for to_num in range(1, N + 1):
+            info = data["to"].get(str(to_num), {})
+            works = list(base_matrix.get(to_num, []))
+            
+            for op_id, op in data["custom_ops"].items():
+                apply = False
+                if op["type"] == "all": apply = True
+                elif op["type"] == "positions" and to_num in op["positions"]: apply = True
+                if apply:
+                    works.append({
+                        "id": op_id, "group": op["group"], "name": op["name"],
+                        "part": data["overrides"].get(op_id, {}).get("part", ""),
+                        "analog": data["overrides"].get(op_id, {}).get("analog", ""),
+                        "schedule_code": op.get("code", "I")
+                    })
+            
+            if not works:
+                continue
+
+            grouped = {}
+            for w in works:
+                grouped.setdefault(w["group"], []).append(w)
+
+            works_html = ""
+            materials_html = ""
+            
+            for group, items in grouped.items():
+                works_html += f"<div style='color: #1f4e78; font-weight: bold; margin-top: 5px;'>{group}</div><ul style='margin:0; padding-left: 20px;'>"
+                for w in items:
+                    works_html += f"<li><b>[{w['schedule_code']}]</b> {w['name']}</li>"
+                works_html += "</ul>"
+
+                reps = [item for item in items if item['schedule_code'] == 'R' and (item.get('part') or item.get('analog'))]
+                for r in reps:
+                    ov = data["overrides"].get(r["id"], {})
+                    part = ov.get("part", r["part"])
+                    analog = ov.get("analog", r["analog"])
+                    materials_html += f"<div style='margin-bottom: 3px;'><b>{r['name']}</b><br><span style='color: gray;'>{part or '—'} {(' / ' + analog) if analog else ''}</span></div>"
+
+            rows.append({
+                "ТО": f"ТО-{to_num}",
+                "План": f"{mileage_for(to_num, interval):,} км".replace(",", " "),
+                "Дата": info.get("date", ""),
+                "Факт": info.get("fact_km", ""),
+                "Работы": works_html or "—",
+                "Материалы": materials_html or "—"
+            })
+        return pd.DataFrame(rows)
+
+    df_summary = build_full_summary()
+
+    if search_query:
+        mask = (
+            df_summary["ТО"].str.contains(search_query, case=False, na=False) |
+            df_summary["Работы"].str.contains(search_query, case=False, na=False) |
+            df_summary["Материалы"].str.contains(search_query, case=False, na=False)
+        )
+        df_filtered = df_summary[mask]
+    else:
+        df_filtered = df_summary
+
+    if df_filtered.empty:
+        st.warning("По вашему запросу ничего не найдено.")
+    else:
+        st.write(f"Найдено строк: {len(df_filtered)}")
+        
+        st.dataframe(
+            df_filtered,
+            column_config={
+                "Работы": st.column_config.TextColumn(width="large"),
+                "Материалы": st.column_config.TextColumn(width="medium"),
+            },
+            hide_index=True,
+            use_container_width=True,
+            height=600
+        )
+
+        # Экспорт отфильтрованных данных
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df_filtered.to_excel(writer, index=False, sheet_name='ТО Сводка')
+        
+        st.download_button(
+            label="⬇ Экспорт этой таблицы в Excel (.xlsx)",
+            data=buffer.getvalue(),
+            file_name="Pajero_TO_Summary.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+
+# ================== ВКЛАДКА 4: ЭКСПОРТ ==================
+with tab4:
+    st.subheader("Краткий экспорт (только отметки)")
     
     def build_export_df():
         rows = []
         for to_num in range(1, N + 1):
             info = data["to"].get(str(to_num), {})
-            
-            # Собираем базовые работы
             works = list(base_matrix.get(to_num, []))
-            # Собираем кастомные работы
             for op_id, op in data["custom_ops"].items():
                 apply = False
                 if op["type"] == "all": apply = True
