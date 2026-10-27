@@ -289,102 +289,109 @@ with tab2:
 
 
 # ================== ВКЛАДКА 3: ПОЛНАЯ СВОДКА ==================
+# ================== ВКЛАДКА 3: ПОЛНАЯ СВОДКА ==================
 with tab3:
     st.subheader("Сводная таблица по всем ТО")
     st.write("Здесь отображаются все работы по всем 56 ТО. Вы можете использовать поиск для фильтрации.")
     
     search_query = st.text_input("🔍 Поиск по работам, материалам или номерам ТО", placeholder="Например: Ремень, Масло, ТО-9...")
 
-    def build_full_summary():
-        rows = []
-        for to_num in range(1, N + 1):
-            info = data["to"].get(str(to_num), {})
-            works = list(base_matrix.get(to_num, []))
-            
-            for op_id, op in data["custom_ops"].items():
-                apply = False
-                if op["type"] == "all": apply = True
-                elif op["type"] == "positions" and to_num in op["positions"]: apply = True
-                if apply:
-                    works.append({
-                        "id": op_id, "group": op["group"], "name": op["name"],
-                        "part": data["overrides"].get(op_id, {}).get("part", ""),
-                        "analog": data["overrides"].get(op_id, {}).get("analog", ""),
-                        "schedule_code": op.get("code", "I")
-                    })
-            
-            if not works:
-                continue
-
-            grouped = {}
-            for w in works:
-                grouped.setdefault(w["group"], []).append(w)
-
-            works_html = ""
-            materials_html = ""
-            
-            for group, items in grouped.items():
-                works_html += f"<div style='color: #1f4e78; font-weight: bold; margin-top: 5px;'>{group}</div><ul style='margin:0; padding-left: 20px;'>"
-                for w in items:
-                    works_html += f"<li><b>[{w['schedule_code']}]</b> {w['name']}</li>"
-                works_html += "</ul>"
-
-                reps = [item for item in items if item['schedule_code'] == 'R' and (item.get('part') or item.get('analog'))]
-                for r in reps:
-                    ov = data["overrides"].get(r["id"], {})
-                    part = ov.get("part", r["part"])
-                    analog = ov.get("analog", r["analog"])
-                    materials_html += f"<div style='margin-bottom: 3px;'><b>{r['name']}</b><br><span style='color: gray;'>{part or '—'} {(' / ' + analog) if analog else ''}</span></div>"
-
-            rows.append({
-                "ТО": f"ТО-{to_num}",
-                "План": f"{mileage_for(to_num, interval):,} км".replace(",", " "),
-                "Дата": info.get("date", ""),
-                "Факт": info.get("fact_km", ""),
-                "Работы": works_html or "—",
-                "Материалы": materials_html or "—"
-            })
-        return pd.DataFrame(rows)
-
-    df_summary = build_full_summary()
-
-    if search_query:
-        mask = (
-            df_summary["ТО"].str.contains(search_query, case=False, na=False) |
-            df_summary["Работы"].str.contains(search_query, case=False, na=False) |
-            df_summary["Материалы"].str.contains(search_query, case=False, na=False)
-        )
-        df_filtered = df_summary[mask]
-    else:
-        df_filtered = df_summary
-
-    if df_filtered.empty:
-        st.warning("По вашему запросу ничего не найдено.")
-    else:
-        st.write(f"Найдено строк: {len(df_filtered)}")
+    # Строим данные для поиска и экспорта (чистый текст)
+    export_rows = []
+    for to_num in range(1, N + 1):
+        info = data["to"].get(str(to_num), {})
+        works = list(base_matrix.get(to_num, []))
         
-        st.dataframe(
-            df_filtered,
-            column_config={
-                "Работы": st.column_config.TextColumn(width="large"),
-                "Материалы": st.column_config.TextColumn(width="medium"),
-            },
-            hide_index=True,
-            use_container_width=True,
-            height=600
-        )
+        for op_id, op in data["custom_ops"].items():
+            apply = False
+            if op["type"] == "all": apply = True
+            elif op["type"] == "positions" and to_num in op["positions"]: apply = True
+            if apply:
+                works.append({
+                    "id": op_id, "group": op["group"], "name": op["name"],
+                    "part": data["overrides"].get(op_id, {}).get("part", ""),
+                    "analog": data["overrides"].get(op_id, {}).get("analog", ""),
+                    "schedule_code": op.get("code", "I")
+                })
+        
+        if not works:
+            continue
 
-        # Экспорт отфильтрованных данных
+        grouped = {}
+        for w in works:
+            grouped.setdefault(w["group"], []).append(w)
+
+        # Собираем текстовую версию для экспорта в Excel
+        text_works = ""
+        for group, items in grouped.items():
+            text_works += f"== {group} ==\n"
+            for w in items:
+                text_works += f"[{w['schedule_code']}] {w['name']}\n"
+            text_works += "\n"
+
+        export_rows.append({
+            "ТО": f"ТО-{to_num}",
+            "План, км": mileage_for(to_num, interval),
+            "Дата": info.get("date", ""),
+            "Факт, км": info.get("fact_km", ""),
+            "Работы (текст)": text_works.strip()
+        })
+
+        # Логика поиска
+        search_text = f"ТО-{to_num} {text_works}".lower()
+        if search_query and search_query.lower() not in search_text:
+            continue
+
+        # --- Отрисовка карточки ---
+        with st.container(border=True):
+            col_h1, col_h2, col_h3, col_h4 = st.columns(4)
+            col_h1.markdown(f"#### **ТО-{to_num}**")
+            col_h2.markdown(f"**План:** {mileage_for(to_num, interval):,} км".replace(",", " "))
+            col_h3.markdown(f"**Дата:** {info.get('date', '—')}")
+            col_h4.markdown(f"**Факт:** {info.get('fact_km', '—')} км")
+            
+            col_w, col_m = st.columns([3, 2])
+            
+            # Колонка с работами
+            with col_w:
+                st.markdown("**Регламентные работы:**")
+                for group, items in grouped.items():
+                    st.markdown(f"<span style='color: #2f75b5; font-weight: bold; font-size: 14px;'>{group}</span>", unsafe_allow_html=True)
+                    for w in items:
+                        st.markdown(f"<div style='margin-left: 15px;'>[{w['schedule_code']}] {w['name']}</div>", unsafe_allow_html=True)
+            
+            # Колонка с материалами
+            with col_m:
+                st.markdown("**Замены / материалы:**")
+                has_materials = False
+                for group, items in grouped.items():
+                    for w in items:
+                        if w["schedule_code"] == "R" and (w.get("part") or w.get("analog")):
+                            has_materials = True
+                            ov = data["overrides"].get(w["id"], {})
+                            part = ov.get("part", w["part"])
+                            analog = ov.get("analog", w["analog"])
+                            st.markdown(f"<div style='margin-bottom: 5px;'><b>{w['name']}</b><br><span style='color: gray; font-size: 12px;'>{part or '—'} {(' / ' + analog) if analog else ''}</span></div>", unsafe_allow_html=True)
+                if not has_materials:
+                    st.markdown("<span style='color: gray;'>—</span>", unsafe_allow_html=True)
+
+    # Экспорт
+    st.divider()
+    df_export = pd.DataFrame(export_rows)
+    
+    if not df_export.empty:
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df_filtered.to_excel(writer, index=False, sheet_name='ТО Сводка')
+            df_export.to_excel(writer, index=False, sheet_name='ТО Сводка')
         
         st.download_button(
-            label="⬇ Экспорт этой таблицы в Excel (.xlsx)",
+            label="⬇ Экспорт этой сводки в Excel (.xlsx)",
             data=buffer.getvalue(),
             file_name="Pajero_TO_Summary.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+    else:
+        st.warning("По вашему запросу ничего не найдено.")
 
 
 # ================== ВКЛАДКА 4: ЭКСПОРТ ==================
