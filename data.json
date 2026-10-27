@@ -23,9 +23,7 @@
     "4": {
       "date": "2026-10-16",
       "fact_km": 15000,
-      "done_works": [
-        "w_4_steering"
-      ]
+      "done_works": []
     }
   },
   "manual": {
