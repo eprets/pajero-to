@@ -14,7 +14,9 @@
     "1": {
       "date": "",
       "fact_km": 0,
-      "done_works": []
+      "done_works": [
+        "w_1_handbrake"
+      ]
     }
   },
   "manual": {
