@@ -33,7 +33,7 @@ v = regulations["vehicle"]
 st.title(f"🚙 Лист ТО — {v['brand']} {v['model']}, {v['year']}")
 st.caption(f"VIN: {v['vin']}")
 
-# ---------- Легенда (как в HTML) ----------
+# ---------- Легенда ----------
 with st.expander("ℹ️ Расшифровка обозначений (I, R, L, C)", expanded=False):
     legend = regulations.get("legend", {})
     st.markdown(f"""
@@ -42,7 +42,7 @@ with st.expander("ℹ️ Расшифровка обозначений (I, R, L,
     * **L** — {legend.get('L', 'Смазка')};
     * **C** — {legend.get('C', 'Очистка')}.
     
-    *Таблица сформирована по листу «Регламент»: ТО-1 = 1 000 км, далее шаг 10 000 км; ТО-56 = 550 000 км.*
+    *Таблица сформирована по листу «Регламент»: ТО-0 = 1 000 км, далее шаг 10 000 км; всего 56 ТО (до 550 000 км).*
     """)
 
 # ---------- Уведомления ----------
@@ -55,7 +55,8 @@ if current_km != data.get("current_km"):
     save_data(data)
 
 reminders = []
-for to_num in range(1, N + 1):
+# Цикл от 0 до N-1 (56 штук)
+for to_num in range(0, N):
     info = data["to"].get(str(to_num), {})
     if not info.get("date"):
         continue
@@ -64,11 +65,11 @@ for to_num in range(1, N + 1):
         reminders.append(f"⚠️ ТО-{to_num} ({planned_km:,} км) — пробег уже {current_km:,} км".replace(",", " "))
 
 next_to = None
-for to_num in range(1, N + 1):
+for to_num in range(0, N):
     if not data["to"].get(str(to_num), {}).get("date"):
         next_to = to_num
         break
-if next_to:
+if next_to is not None:
     planned_km = mileage_for(next_to, interval)
     left = planned_km - current_km
     if left > 0:
@@ -88,7 +89,9 @@ tab1, tab2, tab3, tab4 = st.tabs(["📋 Выполнение ТО", "⚙️ Мо
 # ================== ВКЛАДКА 1: ВЫПОЛНЕНИЕ ТО ==================
 with tab1:
     st.subheader("Регламентные работы")
-    to_options = [f"ТО-{i} — {mileage_for(i, interval):,} км".replace(",", " ") for i in range(1, N + 1)]
+    
+    # Цикл от 0 до N-1
+    to_options = [f"ТО-{i} — {mileage_for(i, interval):,} км".replace(",", " ") for i in range(0, N)]
     selected_label = st.selectbox("Выберите ТО", to_options)
     selected_to = int(selected_label.split("—")[0].replace("ТО-", "").strip())
 
@@ -224,7 +227,6 @@ with tab1:
 
 
 # ================== ВКЛАДКА 2: МОИ ОПЕРАЦИИ ==================
-# ================== ВКЛАДКА 2: МОИ ОПЕРАЦИИ ==================
 with tab2:
     st.subheader("Добавить свою операцию в регламент")
     st.info("Здесь вы можете добавить операцию, которой нет в заводском регламенте.")
@@ -232,7 +234,6 @@ with tab2:
     c3, c4 = st.columns(2)
     op_type = c3.radio("Когда выполнять?", ["Каждое ТО", "Только на выбранных ТО"], key="op_type_radio")
     
-    # Полные расшифровки для выпадающего списка
     code_options = {
         "I — Проверка, затем при необходимости очистка, регулировка или замена": "I",
         "R — Замена": "R",
@@ -244,7 +245,7 @@ with tab2:
     
     to_selection = []
     if op_type == "Только на выбранных ТО":
-        to_selection = st.multiselect("Выберите номера ТО (можно несколько)", list(range(1, N + 1)), default=[1])
+        to_selection = st.multiselect("Выберите номера ТО (можно несколько)", list(range(0, N)), default=[0])
 
     with st.form("add_custom_op"):
         c1, c2 = st.columns(2)
@@ -261,7 +262,7 @@ with tab2:
                 "group": op_group,
                 "type": "all" if op_type == "Каждое ТО" else "positions",
                 "positions": to_selection if op_type != "Каждое ТО" else [],
-                "code": op_code  # Здесь теперь сохранится чистая буква 'I', 'R', 'L' или 'C'
+                "code": op_code
             }
             if part or analog:
                 data["overrides"][op_id] = {"part": part, "analog": analog}
@@ -289,11 +290,9 @@ with tab2:
 
 
 # ================== ВКЛАДКА 3: ПОЛНАЯ СВОДКА ==================
-# ================== ВКЛАДКА 3: ПОЛНАЯ СВОДКА ==================
 with tab3:
     st.subheader("Сводная таблица по всем ТО")
     
-    # Переключатель режимов отображения
     view_mode = st.radio(
         "Что показывать?",
         ["Весь регламент", "Только заполненные ТО (где есть дата)", "Только выполненные работы"],
@@ -305,7 +304,8 @@ with tab3:
     export_rows = []
     found_any = False
 
-    for to_num in range(1, N + 1):
+    # Цикл от 0 до N-1
+    for to_num in range(0, N):
         info = data["to"].get(str(to_num), {})
         done_set = set(info.get("done_works", []))
         
@@ -322,18 +322,15 @@ with tab3:
                     "schedule_code": op.get("code", "I")
                 })
 
-        # Фильтрация по режиму отображения
         if view_mode == "Только заполненные ТО (где есть дата)" and not info.get("date"):
             continue
             
-        # Если выбран режим "Только выполненные", оставляем только отмеченные работы
         works_to_show = works
         if view_mode == "Только выполненные работы":
             works_to_show = [w for w in works if f"w_{to_num}_{w['id']}" in done_set]
             if not works_to_show:
                 continue
 
-        # Собираем текстовую версию для поиска и экспорта
         grouped = {}
         for w in works_to_show:
             grouped.setdefault(w["group"], []).append(w)
@@ -346,7 +343,6 @@ with tab3:
                 text_works += f"[{mark}] [{w['schedule_code']}] {w['name']}\n"
             text_works += "\n"
 
-        # Фильтрация по поиску
         search_text = f"ТО-{to_num} {text_works}".lower()
         if search_query and search_query.lower() not in search_text:
             continue
@@ -360,7 +356,6 @@ with tab3:
             "Работы (выполнено [X] / не выполнено [ ])": text_works.strip()
         })
 
-        # --- Отрисовка карточки ---
         with st.container(border=True):
             col_h1, col_h2, col_h3, col_h4 = st.columns(4)
             col_h1.markdown(f"#### **ТО-{to_num}**")
@@ -370,7 +365,6 @@ with tab3:
             
             col_w, col_m = st.columns([3, 2])
             
-            # Колонка с работами и чекбоксами
             with col_w:
                 st.markdown("**Регламентные работы:**")
                 changed = False
@@ -379,7 +373,6 @@ with tab3:
                     for w in items:
                         key = f"w_{to_num}_{w['id']}"
                         checked = key in done_set
-                        # Чекбокс прямо в сводке!
                         new_checked = st.checkbox(
                             f"[{w['schedule_code']}] {w['name']}", 
                             value=checked, 
@@ -396,7 +389,6 @@ with tab3:
                     save_data(data)
                     st.rerun()
             
-            # Колонка с материалами
             with col_m:
                 st.markdown("**Замены / материалы:**")
                 has_materials = False
@@ -410,7 +402,6 @@ with tab3:
                 if not has_materials:
                     st.markdown("<span style='color: gray;'>—</span>", unsafe_allow_html=True)
 
-    # Экспорт
     st.divider()
     df_export = pd.DataFrame(export_rows)
     
@@ -435,7 +426,8 @@ with tab4:
     
     def build_export_df():
         rows = []
-        for to_num in range(1, N + 1):
+        # Цикл от 0 до N-1
+        for to_num in range(0, N):
             info = data["to"].get(str(to_num), {})
             works = list(base_matrix.get(to_num, []))
             for op_id, op in data["custom_ops"].items():
