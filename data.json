@@ -1,0 +1,17 @@
+{
+  "to": {
+    "3": {
+      "date": "",
+      "fact_km": 0,
+      "done_works": [
+        "w_3_handbrake",
+        "w_3_plugs_std",
+        "w_3_hoses",
+        "w_3_grease",
+        "w_3_fuel_lines"
+      ]
+    }
+  },
+  "manual": {},
+  "current_km": 2000
+}

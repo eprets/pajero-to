@@ -7,9 +7,13 @@ FILE_PATH = "data.json"
 
 
 def _get_secrets():
-    token = st.secrets.get("GITHUB_TOKEN", "")
-    repo = st.secrets.get("GITHUB_REPO", "")
-    return token, repo
+    try:
+        token = st.secrets.get("GITHUB_TOKEN", "")
+        repo = st.secrets.get("GITHUB_REPO", "")
+        return token, repo
+    except Exception:
+        # Локальный запуск без secrets.toml
+        return "", ""
 
 
 def _api_url(repo):
@@ -19,7 +23,6 @@ def _api_url(repo):
 def load_data():
     token, repo = _get_secrets()
     if not token or not repo:
-        # Локальный фолбэк
         try:
             with open(FILE_PATH, "r", encoding="utf-8") as f:
                 return json.load(f)

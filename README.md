@@ -12,3 +12,5 @@ streamlit run app.py
 3. В Advanced settings → Secrets добавить:
    GITHUB_TOKEN = "ghp_..."
    GITHUB_REPO = "ваш_логин/pajero-to"
+
+  
