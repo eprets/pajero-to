@@ -30,8 +30,18 @@ data.setdefault("custom_ops", {})
 data.setdefault("overrides", {})
 
 v = regulations["vehicle"]
-st.title(f"🚙 Лист ТО — {v['brand']} {v['model']}, {v['year']}")
-st.caption(f"VIN: {v['vin']}")
+
+# ---------- Заголовок с логотипом ----------
+col_logo, col_title = st.columns([1, 12])
+with col_logo:
+    try:
+        st.image("logo.png", width=80)
+    except Exception:
+        st.write("🚙")
+
+with col_title:
+    st.title(f"Лист ТО — {v['brand']} {v['model']}, {v['year']}")
+    st.caption(f"VIN: {v['vin']}")
 
 # ---------- Легенда ----------
 with st.expander("ℹ️ Расшифровка обозначений (I, R, L, C)", expanded=False):
@@ -55,7 +65,6 @@ if current_km != data.get("current_km"):
     save_data(data)
 
 reminders = []
-# Цикл от 0 до N-1 (56 штук)
 for to_num in range(0, N):
     info = data["to"].get(str(to_num), {})
     if not info.get("date"):
@@ -90,7 +99,6 @@ tab1, tab2, tab3, tab4 = st.tabs(["📋 Выполнение ТО", "⚙️ Мо
 with tab1:
     st.subheader("Регламентные работы")
     
-    # Цикл от 0 до N-1
     to_options = [f"ТО-{i} — {mileage_for(i, interval):,} км".replace(",", " ") for i in range(0, N)]
     selected_label = st.selectbox("Выберите ТО", to_options)
     selected_to = int(selected_label.split("—")[0].replace("ТО-", "").strip())
@@ -112,7 +120,6 @@ with tab1:
     if int(new_km) != int(entry.get("fact_km", 0)):
         entry["fact_km"] = int(new_km)
 
-    # Кнопки сохранения и удаления данных ТО
     col_save, col_del = st.columns([2, 2])
     with col_save:
         if st.button("💾 Сохранить дату и пробег"):
@@ -121,10 +128,8 @@ with tab1:
     
     with col_del:
         if st.button("🗑 Очистить данные этого ТО"):
-            # Полностью удаляем запись об этом ТО (дата, пробег, выполненные работы)
             if str(selected_to) in data["to"]:
                 del data["to"][str(selected_to)]
-            # Также удаляем ручные материалы, привязанные к этому ТО
             if str(selected_to) in data["manual"]:
                 del data["manual"][str(selected_to)]
             
@@ -320,7 +325,6 @@ with tab3:
     export_rows = []
     found_any = False
 
-    # Цикл от 0 до N-1
     for to_num in range(0, N):
         info = data["to"].get(str(to_num), {})
         done_set = set(info.get("done_works", []))
@@ -437,19 +441,16 @@ with tab3:
 
 
 # ================== ВКЛАДКА 4: ЭКСПОРТ ==================
-# ================== ВКЛАДКА 4: ЭКСПОРТ ==================
 with tab4:
     st.subheader("Подробный экспорт всех работ")
     st.write("Здесь выгружается каждый шаг (ТО, работа, дата) в отдельной строке. Такую таблицу удобно читать и фильтровать в Excel.")
     
     def build_detailed_export_df():
         rows = []
-        # Цикл по всем ТО (от 0 до 55)
         for to_num in range(0, N):
             info = data["to"].get(str(to_num), {})
             done_set = set(info.get("done_works", []))
             
-            # Собираем работы (базовые + кастомные)
             works = list(base_matrix.get(to_num, []))
             for op_id, op in data["custom_ops"].items():
                 apply = False
@@ -463,7 +464,6 @@ with tab4:
                         "schedule_code": op.get("code", "I")
                     })
             
-            # Если на это ТО нет работ, пропускаем
             if not works:
                 continue
                 
@@ -492,7 +492,6 @@ with tab4:
     else:
         st.info(f"Всего строк для экспорта: {len(df_detailed)}")
         
-        # Красивый предпросмотр (первые 100 строк, чтобы не вешать браузер)
         st.dataframe(df_detailed.head(100), use_container_width=True)
         if len(df_detailed) > 100:
             st.caption("*(Показаны первые 100 строк из всех. В Excel выгрузится полностью)*")
