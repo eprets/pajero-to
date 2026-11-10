@@ -10,7 +10,16 @@
     "0": {
       "date": "",
       "fact_km": 1052,
-      "done_works": []
+      "done_works": [
+        "w_0_steering",
+        "w_0_exhaust",
+        "w_0_cv_boots",
+        "w_0_suspension",
+        "w_0_brake_discs",
+        "w_0_fuel_lines",
+        "w_0_hub_bearings",
+        "w_0_brake_hoses"
+      ]
     }
   },
   "manual": {
