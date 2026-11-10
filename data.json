@@ -10,7 +10,9 @@
     "0": {
       "date": "",
       "fact_km": 1052,
-      "done_works": []
+      "done_works": [
+        "w_0_suspension"
+      ]
     }
   },
   "manual": {
