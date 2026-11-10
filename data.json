@@ -6,12 +6,18 @@
       "done_works": [
         "w_4_cv_boots"
       ]
+    },
+    "0": {
+      "date": "",
+      "fact_km": 0,
+      "done_works": []
     }
   },
   "manual": {
-    "4": []
+    "4": [],
+    "0": []
   },
   "custom_ops": {},
   "overrides": {},
-  "current_km": 10000
+  "current_km": 11000
 }
